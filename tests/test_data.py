@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import sys
 
 import nibabel as nib
 import numpy as np
@@ -328,3 +330,57 @@ def test_builds_real_25d_subject_23_example_without_labels() -> None:
     model_input = build_25d_input(t1, t2, z=0)
 
     assert model_input.shape == (6, t1.shape[0], t1.shape[1])
+
+
+def test_inspection_script_saves_training_figure(tmp_path: Path) -> None:
+    script_path = PROJECT_ROOT / "scripts/inspect_data.py"
+    output_path = tmp_path / "subject-1.png"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script_path),
+            "--split",
+            "training",
+            "--subject",
+            "1",
+            "--slice",
+            "0",
+            "--output",
+            str(output_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env={"MPLBACKEND": "Agg"},
+    )
+
+    assert output_path.is_file()
+    assert "input_2.5d=(6, 144, 192)" in result.stdout
+
+
+def test_inspection_script_saves_testing_figure_without_labels(tmp_path: Path) -> None:
+    script_path = PROJECT_ROOT / "scripts/inspect_data.py"
+    output_path = tmp_path / "subject-23.png"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script_path),
+            "--split",
+            "testing",
+            "--subject",
+            "23",
+            "--slice",
+            "0",
+            "--output",
+            str(output_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env={"MPLBACKEND": "Agg"},
+    )
+
+    assert output_path.is_file()
+    assert "input_2.5d=(6, 160, 192)" in result.stdout
