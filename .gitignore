@@ -1,18 +1,10 @@
-# Local datasets and generated outputs
+# Données iSeg : volumineuses, soumises aux règles de non-redistribution.
 /data/
-/outputs/
-/checkpoints/
+/datasets/
 
-# Model checkpoints and experiment artifacts
-*.ckpt
-*.pt
-*.pth
-
-# Python environments
+# Environnements Python et caches générés automatiquement.
 .venv/
 venv/
-
-# Python caches and test artifacts
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -20,11 +12,20 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
-
-# Jupyter
 .ipynb_checkpoints/
 
-# Editors and operating systems
+# Résultats produits par les entraînements et les évaluations.
+/outputs/
+/runs/
+/checkpoints/
+/artifacts/
+/exports/
+*.pt
+*.pth
+*.ckpt
+
+# Fichiers propres à une machine ou à un éditeur.
 .DS_Store
 .idea/
 .vscode/
+.env

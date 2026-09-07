@@ -1,6 +1,7 @@
-from pathlib import Path
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 import nibabel as nib
 import numpy as np
@@ -16,7 +17,6 @@ from src.data import (
     remove_trailing_singleton_dimension,
     validate_matching_shapes,
 )
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -126,7 +126,7 @@ def test_rejects_all_zero_volume() -> None:
 def test_rejects_constant_nonzero_volume() -> None:
     volume = np.array([[0, 5, 5, 0]], dtype=np.int16)
 
-    with pytest.raises(ValueError, match="zero non-zero variance"):
+    with pytest.raises(ValueError, match="zero variance among non-zero voxels"):
         normalize_nonzero_intensity(volume)
 
 
@@ -151,7 +151,9 @@ def test_builds_25d_input_with_expected_channel_order() -> None:
 
 
 def test_repeats_closest_slice_at_volume_boundaries() -> None:
-    t1 = np.stack([np.full((2, 3), value, dtype=np.float32) for value in range(4)], axis=-1)
+    t1 = np.stack(
+        [np.full((2, 3), value, dtype=np.float32) for value in range(4)], axis=-1
+    )
     t2 = t1 + 10
 
     first = build_25d_input(t1, t2, z=0)
@@ -162,7 +164,9 @@ def test_repeats_closest_slice_at_volume_boundaries() -> None:
 
 
 def test_extracts_central_label_slice() -> None:
-    labels = np.stack([np.full((2, 3), value, dtype=np.uint8) for value in range(4)], axis=-1)
+    labels = np.stack(
+        [np.full((2, 3), value, dtype=np.uint8) for value in range(4)], axis=-1
+    )
 
     target = extract_central_label_slice(labels, z=2)
 
@@ -202,8 +206,18 @@ def test_rejects_missing_image(tmp_path: Path) -> None:
 def test_rejects_non_header_path(tmp_path: Path) -> None:
     image_path = tmp_path / "sample.img"
 
-    with pytest.raises(ValueError, match="Expected an Analyze .hdr path"):
+    with pytest.raises(ValueError, match=r"Expected an Analyze \.hdr path"):
         load_analyze_volume(image_path)
+
+
+def test_rejects_corrupt_analyze_pair(tmp_path: Path) -> None:
+    header_path = tmp_path / "corrupt.hdr"
+    image_path = tmp_path / "corrupt.img"
+    header_path.write_bytes(b"not an Analyze header")
+    image_path.write_bytes(b"not Analyze image data")
+
+    with pytest.raises(ValueError, match="Could not read Analyze pair"):
+        load_analyze_volume(header_path)
 
 
 @pytest.mark.parametrize(
@@ -334,7 +348,13 @@ def test_builds_real_25d_subject_23_example_without_labels() -> None:
 
 def test_inspection_script_saves_training_figure(tmp_path: Path) -> None:
     script_path = PROJECT_ROOT / "scripts/inspect_data.py"
+    header_path = PROJECT_ROOT / "data/training/subject-1-T1.hdr"
+    if not header_path.is_file():
+        pytest.skip("Local training dataset not available")
+
     output_path = tmp_path / "subject-1.png"
+    environment = os.environ.copy()
+    environment["MPLBACKEND"] = "Agg"
 
     result = subprocess.run(
         [
@@ -352,16 +372,23 @@ def test_inspection_script_saves_training_figure(tmp_path: Path) -> None:
         check=True,
         capture_output=True,
         text=True,
-        env={"MPLBACKEND": "Agg"},
+        env=environment,
     )
 
+    t1 = load_analyze_volume(header_path)
     assert output_path.is_file()
-    assert "input_2.5d=(6, 144, 192)" in result.stdout
+    assert f"input_2.5d=(6, {t1.shape[0]}, {t1.shape[1]})" in result.stdout
 
 
 def test_inspection_script_saves_testing_figure_without_labels(tmp_path: Path) -> None:
     script_path = PROJECT_ROOT / "scripts/inspect_data.py"
+    header_path = PROJECT_ROOT / "data/testing/subject-23-T1.hdr"
+    if not header_path.is_file():
+        pytest.skip("Local testing dataset not available")
+
     output_path = tmp_path / "subject-23.png"
+    environment = os.environ.copy()
+    environment["MPLBACKEND"] = "Agg"
 
     result = subprocess.run(
         [
@@ -379,8 +406,9 @@ def test_inspection_script_saves_testing_figure_without_labels(tmp_path: Path) -
         check=True,
         capture_output=True,
         text=True,
-        env={"MPLBACKEND": "Agg"},
+        env=environment,
     )
 
+    t1 = load_analyze_volume(header_path)
     assert output_path.is_file()
-    assert "input_2.5d=(6, 160, 192)" in result.stdout
+    assert f"input_2.5d=(6, {t1.shape[0]}, {t1.shape[1]})" in result.stdout

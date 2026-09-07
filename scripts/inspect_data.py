@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Inspect one preprocessed iSeg-2017 subject and display a slice."""
 
 import argparse
@@ -9,6 +8,7 @@ from typing import Optional, Tuple
 import numpy as np
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+# Make project modules importable when this file is executed by path.
 sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from src.data import (  # noqa: E402
@@ -26,14 +26,17 @@ def load_subject_volumes(
 ) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
     """Load and prepare T1, T2 and optional labels for one subject."""
 
+    if split not in {"training", "testing"}:
+        raise ValueError(f"Unknown data split: {split}")
+
     data_directory = repository_root / "data" / split
     subject_prefix = f"subject-{subject_id}"
     t1 = load_analyze_volume(data_directory / f"{subject_prefix}-T1.hdr")
     t2 = load_analyze_volume(data_directory / f"{subject_prefix}-T2.hdr")
-    labels_path = data_directory / f"{subject_prefix}-label.hdr"
 
     labels = None
-    if labels_path.is_file():
+    if split == "training":
+        labels_path = data_directory / f"{subject_prefix}-label.hdr"
         labels = remap_labels(load_analyze_volume(labels_path))
 
     validate_matching_shapes(t1, t2, labels)
@@ -100,14 +103,16 @@ def main() -> None:
         f"slice={slice_index}/{depth - 1} | input_2.5d={model_input.shape}"
     )
 
-    if arguments.output is None:
-        import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
 
+    if arguments.output is None:
         plt.show()
     else:
         arguments.output.parent.mkdir(parents=True, exist_ok=True)
         figure.savefig(arguments.output, dpi=150)
         print(f"figure={arguments.output}")
+
+    plt.close(figure)
 
 
 if __name__ == "__main__":

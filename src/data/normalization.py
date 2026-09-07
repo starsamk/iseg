@@ -18,7 +18,9 @@ def normalize_nonzero_intensity(volume: np.ndarray) -> np.ndarray:
     mean = np.mean(nonzero_values, dtype=np.float64)
     standard_deviation = np.std(nonzero_values, dtype=np.float64)
     if standard_deviation == 0:
-        raise ValueError("Cannot normalize a volume with zero non-zero variance")
+        raise ValueError(
+            "Cannot normalize a volume with zero variance among non-zero voxels"
+        )
 
     normalized = np.zeros(volume.shape, dtype=np.float32)
     normalized[nonzero_mask] = (nonzero_values - mean) / standard_deviation

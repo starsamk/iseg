@@ -4,7 +4,6 @@ from typing import Dict
 
 import numpy as np
 
-
 RAW_TO_INTERNAL_LABELS: Dict[int, int] = {
     0: 0,
     10: 1,
@@ -29,8 +28,7 @@ def remap_labels(labels: np.ndarray) -> np.ndarray:
     if unknown_values:
         expected_values = sorted(RAW_TO_INTERNAL_LABELS)
         raise ValueError(
-            f"Unknown label values: {unknown_values}. "
-            f"Expected: {expected_values}"
+            f"Unknown label values: {unknown_values}. Expected: {expected_values}"
         )
 
     remapped = np.empty(labels.shape, dtype=np.uint8)
